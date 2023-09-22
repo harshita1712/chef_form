@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Server Hostnames Input</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="my-color">
+      <h1>Enter Server Hostnames</h1>
+
+      <form id="hostnameForm">
+        <label for="hostnames">Server Hostnames:</label>
+        <textarea id="hostnames" name="hostnames" rows="5" cols="50"></textarea>
+        <br />
+        <input type="submit" value="submit" />
+        <div id="loading-screen" style="display: none">
+          <p>Loading...</p>
+          <img
+            src="/static/loading-loading-forever.gif"
+            width="30"
+            height="30"
+            alt="loading"
+          />
+        </div>
+        <p id="current-hostname"></p>
+        <!-- Modify the HTML code for the tick GIF to wrap it in a div with inline-block display -->
+        <div id="tick-gif" style="display: none">
+          <img
+            src="/static/icons8-tick.gif"
+            width="30"
+            height="30"
+            alt="tick"
+            style="display: inline-block; margin-left: 5px; margin-top: 5px"
+          />
+        </div>
+
+        <div class="download-csv">
+        <p id="download-line" style="display: none">Your file is ready to download</p>
+        <!-- Add a download button and set its ID to "download-button" -->
+        <button
+          id="download-button"
+          style="
+            display: none;
+            padding: 10px 20px;
+            background-color: #00395d;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+          "
+        >
+          Download CSV
+        </button>
+
+        <!-- Add an invisible link to trigger the download -->
+        <a
+          id="download-link"
+          style="display: none"
+          href="/download_csv"
+          download="output.csv"
+        ></a>
+        </div>
+      </form>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        document
+          .getElementById("hostnameForm")
+          .addEventListener("submit", function (event) {
+            event.preventDefault();
+            const hostnameForm = document.getElementById("hostnameForm");
+            const hostnamesTextarea = document.getElementById("hostnames");
+            const loadingScreen = document.getElementById("loading-screen");
+            const currentHostnameElement =
+              document.getElementById("current-hostname");
+            const hostnames = hostnamesTextarea.value.trim().split("\n");
+
+            if (hostnames.length === 0) {
+              alert("Please enter at least one hostname.");
+              return;
+            }
+
+            localStorage.setItem("hostnames", JSON.stringify(hostnames));
+            let currentIndex = 0;
+            function sendRequest() {
+              if (currentIndex < hostnames.length) {
+                const currentHostname = hostnames[currentIndex];
+                currentHostnameElement.textContent = `Currently Processing: ${currentHostname}`;
+                loadingScreen.style.display = "block";
+
+                fetch("/store_hostnames", {
+                  method: "POST",
+                  body: JSON.stringify({ hostnames: currentHostname }),
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                })
+                  .then((response) => response.json())
+                  .then((data) => {
+                    console.log(data);
+                    currentIndex++;
+                    setTimeout(sendRequest, 1000);
+                  })
+                  .catch((error) => {
+                    console.error(error);
+                    currentIndex++;
+                  });
+              } else {
+                loadingScreen.style.display = "none";
+                currentHostnameElement.textContent = "Processing completed";
+                currentHostnameElement.style.display = "inline-block";
+
+                const tickGif = document.getElementById("tick-gif");
+                tickGif.style.display = "inline-block";
+
+                // Make the download button and link visible
+                const downloadButton = document.getElementById("download-button");
+                const downloadLink = document.getElementById("download-link");
+                downloadButton.style.display = "inline-block";
+
+                const downloadLine = document.getElementById("download-line");
+                downloadLine.style.display = "inline-block";
+
+                // Set the href attribute of the download link to the URL where your Python code generates the CSV
+                downloadLink.href = "output.csv";
+                downloadLink.style.display = "inline-block";
+              }
+            }
+            sendRequest();
+          });
+      });
+    </script>
+  </body>
+</html>
